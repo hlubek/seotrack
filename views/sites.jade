@@ -1,0 +1,5 @@
+h1= title
+ul
+  - each site in sites
+    li
+      a(href='/sites/' + site.url, title='View site')= site.url

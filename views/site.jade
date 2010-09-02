@@ -1,0 +1,28 @@
+h1= title
+h2= site.url
+ul
+  - each keyword in site.keywords
+    li
+      = keyword
+      br
+      | Aktuell
+      - if (positionsByKeyword[keyword][0])
+        = positionsByKeyword[keyword][0][1]
+      - else
+        | undefined
+      .graph('data-keyword'=keyword, style='width:600px;height:75px;')
+
+
+:javascript
+  | var data = #{JSON.stringify(positionsByKeyword)};
+  | $(function() {
+  |   var keyword;
+  |   for(keyword in data) {
+  |     $.plot($('div.graph[data-keyword="' + keyword + '"]'), [data[keyword]], {
+  |       xaxis: { mode: "time" },
+  |       yaxis: { minTickSize: 1 },
+  |       lines: { show: true },
+  |       points: { show: true }
+  |     });
+  |   }
+  | });
