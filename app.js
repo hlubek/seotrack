@@ -12,6 +12,21 @@ var express = require('express'),
 	client = couchdb.createClient(5984, 'localhost'),
 	db = client.db('seotrack');
 
+
+/*
+
+"views": {
+       "sitesByUrl": {
+           "map": "function(doc) {\u000a  if (doc.type == 'site') {\u000a    emit(doc.url, doc);\u000a  }\u000a}\u000a"
+       },
+       "results": {
+           "map": "function(doc) {\u000a  if (doc.type == 'result') {\u000a    emit([doc.site, doc.keyword, doc.date.substr(0, 4), doc.date.substr(5, 2), doc.date.substr(8, 2)], doc.position);\u000a  }\u000a}\u000a",
+           "reduce": "function(keys, values, rereduce) {\u000a  if (!rereduce) {\u000a    return [sum(values), values.length];\u000a  } else {\u000a    var s = 0, items = 0;\u000a    values.forEach(function(value) {\u000a      s += value[0];\u000a      items += value[1];\u000a    });\u000a    return [s, items];\u000a  }\u000a}"
+       }
+   }
+
+*/
+
 var view = function(design, view, query) {
 	return function(callback, errback) {	
 		db.view(design, view, query, function(er, result) {
