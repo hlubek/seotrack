@@ -1,4 +1,47 @@
 body {
   padding: 50px;
-  font: 14px "Lucida Grande", "Helvetica Nueue", Arial, sans-serif;
+  font: 14px "Helvetica", Arial, sans-serif;
+  background: #b2b2b2;
+  color: #ffffff;
+}
+
+ul.positions {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+ul.positions li {
+	position: relative;
+	height: 100px;
+	margin: 20px;
+}
+
+ul.positions .position {
+	position: absolute;
+	background: #999;
+	-moz-border-radius: 20px;
+	width: 100px;
+	height: 90px;
+	text-align: center;
+	padding: 10px 0 0 0;
+}
+
+ul.positions .position .number {
+	font-size: 64px;
+	text-shadow: #777777 1px 1px;
+}
+
+ul.positions .keyword {
+	position: absolute;
+	left: 120px;
+	top: 20px;
+	width: 300px;
+	font-weight: normal;
+	text-shadow: #777777 1px 1px;
+}
+
+ul.positions .graph {
+	position: absolute;
+	left: 440px;
 }

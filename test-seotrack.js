@@ -3,6 +3,7 @@ var seotrack = require('./lib/seotrack'),
 	client = couchdb.createClient(5984, 'localhost'),
 	db = client.db('seotrack');
 
+/*
 var config = {
 	'http://www.networkteam.com': [
 		"Webdesign Kiel",
@@ -30,11 +31,20 @@ var config = {
 		"singlebörse"
 	]
 };
+*/
 
 var seotrackService = seotrack.createService(db, {});
-seotrackService.updatePositions(config, function(er, success) {
-	if (er) {
-		throw new Error(JSON.stringify(er));
-	}
-	console.log(success);
+
+db.view('app', 'sitesByUrl', {}, function(er, result) {
+	var sites = result.rows.map(function(entry) { return entry.value; }),
+		config = {};
+	sites.forEach(function(site) {
+		config[site.url] = site.keywords;
+	});
+	seotrackService.updatePositions(config, function(er, success) {
+		if (er) {
+			throw new Error(JSON.stringify(er));
+		}
+	});
 });
+

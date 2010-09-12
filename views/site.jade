@@ -1,28 +1,35 @@
-h1= title
-h2= site.url
-ul
+h1
+  span.bcpart Rankings
+  &nbsp;
+  span.bcpart= site.url
+ul.positions
   - each keyword in site.keywords
     li
-      = keyword
-      br
-      | Aktuell
-      - if (positionsByKeyword[keyword][0])
-        = positionsByKeyword[keyword][0][1]
-      - else
-        | undefined
-      .graph('data-keyword'=keyword, style='width:600px;height:75px;')
+      .position
+        - if (positionsByKeyword[keyword] && positionsByKeyword[keyword][0])
+          span.number= positionsByKeyword[keyword][positionsByKeyword[keyword].length - 1][1]
+        - else
+          span.number ?
+      h2.keyword= keyword
+      - if (positionsByKeyword[keyword] && positionsByKeyword[keyword][0])
+        .graph('data-keyword'=keyword, style='width:600px;height:100px;')
+
 
 
 :javascript
   | var data = #{JSON.stringify(positionsByKeyword)};
   | $(function() {
-  |   var keyword;
+  |   var keyword, container;
   |   for(keyword in data) {
-  |     $.plot($('div.graph[data-keyword="' + keyword + '"]'), [data[keyword]], {
+  |     container = $('div.graph[data-keyword="' + keyword + '"]');
+  |     if (container.length) {
+  |     $.plot(container, [data[keyword].map(function(datapoint) {return [datapoint[0], -datapoint[1]]})], {
   |       xaxis: { mode: "time" },
-  |       yaxis: { minTickSize: 1 },
+  |       yaxis: { minTickSize: 1, tickDecimals: 0, tickFormatter: function(val, axis) { return -val.toFixed(axis.tickDecimals) } },
   |       lines: { show: true },
-  |       points: { show: true }
+  |       points: { show: true },
+  |       grid: { borderWidth: 0 }
   |     });
+  |     }
   |   }
   | });
