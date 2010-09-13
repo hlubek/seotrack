@@ -1,18 +1,24 @@
-!!!
+!!! 5
 html
   head
     title= title
+    link(rel='stylesheet', href='/stylesheets/smoothness/jquery-ui-1.8.4.custom.css')
     link(rel='stylesheet', href='/stylesheets/style.css')
-    script(language="javascript", type="text/javascript", src="/javascripts/jquery.js")
+    script(language="javascript", type="text/javascript", src="/javascripts/jquery-1.4.2.min.js")
+    script(language="javascript", type="text/javascript", src="/javascripts/jquery-ui-1.8.4.custom.min.js")
     script(language="javascript", type="text/javascript", src="/javascripts/jquery.flot.js")
     script(language="javascript", type="text/javascript", src="/javascripts/jquery.flot.selection.js")
   body
     header
       .status
-        | Eingeloggt als:
-        span.username= user.username
-        a(href='/logout') abmelden
+        - if (locals.user)
+          | Logged in as:
+          span.username= user.username
       nav.main
-        a(href='/sites') Ranking
-        a(href='/users') Benutzer
+        != navLink('/sites', 'Ranking')
+        - if (authorized.to('view', 'users')())
+          != navLink('/users', 'Users')
+        - if (authorized.to('view', 'info')())
+          != navLink('/info', 'Info')
+        .logo
     .content!= body

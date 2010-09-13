@@ -1,5 +1,41 @@
-h1= title
-ul
-  - each site in sites
-    li
-      a(href='/sites/' + site.url, title='View site')= site.url
+h1.bc
+  span.bcpart Sites
+.wrapper
+  ul
+    - each site in sites
+      li
+        h2
+          a(href='/sites/' + site.url, title='View site')= site.url
+  - if (authorized.to('create', 'site')())
+    #site-form(title='Create new site')
+      form
+        fieldset
+          label(for='url') URL
+          input(type='text', name='url', class='ui-widget-content ui-corner-all')
+          label(for='keywords')
+            | List of Keywords (one per line)
+          textarea(name='keywords', class='ui-widget-content ui-corner-all', rows='10')
+    button#create-site Create new site
+    :javascript
+      | $("#site-form").dialog({
+      |   autoOpen: false,
+      |   height: 400,
+      |   width: 450,
+      |   modal: true,
+      |   buttons: {
+      |     'Create site': function() {
+      |       var that = this;
+      |       $.post('/sites', $("#site-form form").serialize(), function(data) {
+      |         if (data.success) { window.location = '/sites'; }
+      |         else {
+      |           $('#site-form .error-message').remove();
+      |           $('#site-form').prepend('<div class="error-message ui-widget"><div class="ui-state-error ui-corner-all">' + data.reason + '</div></div>');
+      |         }
+      |       });
+      |     },
+      |     'Cancel': function() {
+      |       $(this).dialog('close');
+      |     }
+      |   }
+      | });
+      | $('#create-site').button({icons: {primary:'ui-icon-plusthick'}}).click(function() {	$('#site-form').dialog('open');	});

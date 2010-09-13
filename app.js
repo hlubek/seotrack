@@ -8,6 +8,7 @@ var express = require('express'),
     auth = require('../connect-auth/lib/auth'),
     Do = require('./lib/do'),
     utils = require('./lib/utils'),
+	querystring = require('querystring'),
     seotrack = require('./lib/seotrack'),
     couchdb = require('./lib/node-couchdb/couchdb'),
 	client = couchdb.createClient(5984, 'localhost'),
@@ -31,7 +32,7 @@ CouchDB Design Document:
 */
 
 var view = function(design, view, query) {
-	return function(callback, errback) {	
+	return function(callback, errback) {
 		db.view(design, view, query, function(er, result) {
 			if (er) {
 				errback(er);
@@ -46,6 +47,9 @@ var view = function(design, view, query) {
 // Authentication
 
 var getPasswordForUserFunction = function(username, cb) {
+	if (username === '_logout') {
+		return cb(null, '_logout', {roles: []});
+	}
 	db.view('app', 'usersByUsername', {key: username}, function(er, result) {
 		if (er) {
 			return cb(er);
@@ -58,6 +62,10 @@ var getPasswordForUserFunction = function(username, cb) {
 			return cb(null, undefined);
 		}
 	});
+};
+
+var getPasswordForLogoutFunction = function(username, cb) {
+	return cb(null, '_logout');
 };
 
 var errorHandler = function(error) {
@@ -73,7 +81,8 @@ app.configure(function() {
     app.use(connect.bodyDecoder());
     
     app.use(auth([
-    	auth.Digest({getPasswordForUser: getPasswordForUserFunction})
+    	auth.Digest({getPasswordForUser: getPasswordForUserFunction}),
+    	auth.Basic({getPasswordForUser: getPasswordForLogoutFunction})
     ]));
     
     app.use(connect.methodOverride());
@@ -94,6 +103,22 @@ app.configure('production', function() {
 
 app.getAuthenticated = function(route, callback) {
 	app.get(route, function(req, res) {
+		req.authenticate(['digest'], function(er, authenticated) {
+			if (er) {
+				return errorHandler(er, req, res);
+			}
+			if (authenticated) {
+				callback(req, res);
+			} else {
+				// FIXME Can it happen?
+				errorHandler('Not authenticated', req, res);
+			}
+		});
+	});
+};
+
+app.postAuthenticated = function(route, callback) {
+	app.post(route, function(req, res) {
 		req.authenticate(['digest'], function(er, authenticated) {
 			if (er) {
 				return errorHandler(er, req, res);
@@ -138,6 +163,24 @@ var authorized = function(req) {
 					return user.details.roles.indexOf('admin') !== -1 ||
 						user.details.sites.indexOf(context.url) !== -1;
 				};
+			} else if (action === 'view' && scope === 'users') {
+				return function(context) {
+					return user.details.roles.indexOf('admin') !== -1;
+				};
+			} else if (action === 'view' && scope === 'info') {
+				return function(context) {
+					return user.details.roles.indexOf('admin') !== -1;
+				};
+			} else if (action === 'create' && scope === 'site') {
+				return function(context) {
+					return user.details.roles.indexOf('admin') !== -1;
+				};
+			} else if (action === 'update' && scope === 'site') {
+				return function(context) {
+					return user.details.roles.indexOf('admin') !== -1 ||
+						(user.details.roles.indexOf('siteadmin') !== -1 &&
+						user.details.sites.indexOf(context.url) !== -1);
+				};
 			}
 			return function(context) {
 				return false;
@@ -148,18 +191,21 @@ var authorized = function(req) {
 
 var layoutLocals = function(req) {
 	return {
-		user: req.getAuthDetails().user.details
+		user: req.getAuthDetails().user.details,
+		authorized: authorized(req),
+		navLink: function(path, label) {
+			var styleClass = (req.url.indexOf(path) === 0) ? 'class="active"' : '';
+			return '<a href="' + path + '" ' + styleClass + '>' + label + '</a>';
+		}
 	};
 };
 
+// GET /
 app.get('/', function(req, res) {
-    res.render('index.jade', {
-        locals: {
-            title: 'Seotrack'
-        }
-    });
+    res.redirect('/sites');
 });
 
+// GET /sites
 app.getAuthenticated('/sites', function(req, res) {
 	Do.parallel(
 		view('app', 'sitesByUrl', {})		
@@ -176,6 +222,27 @@ app.getAuthenticated('/sites', function(req, res) {
 	}, errorHandler);
 });
 
+// POST /sites
+app.postAuthenticated('/sites', function(req, res) {
+	if (!authorized(req).to('create', 'site')()) {
+		res.writeHead(403, { 'Content-Type': 'text/plain' });
+	    res.end('Not authorized');
+	    return;
+	}
+	var site = { type: 'site' };
+	// TODO Validate URL
+	site.url = req.body.url;
+	// TODO Validate keywords, trim
+	site.keywords = req.body.keywords.split(/\s*\r?\n\s*/);
+	db.saveDoc(querystring.escape('site-' + site.url), site, function(er, ok) {
+		if (er) {
+			return res.send(utils.merge({success: false}, er));
+		}
+		res.send({success: true});
+	});
+});
+
+// GET /sites/http://www.example.com
 app.getAuthenticated('/sites/*', function(req, res) {
 	var url = req.params[0];
 	if (!authorized(req).to('view', 'site')({url: url})) {
@@ -187,6 +254,9 @@ app.getAuthenticated('/sites/*', function(req, res) {
 		view('app', 'sitesByUrl', {key: url}),
 		view('app', 'results', {group: true, group_level: 5, startkey: [url], endkey: [url, {}]})
 	)(function(sitesData, resultsData) {
+		if (sitesData.rows.length == 0) {
+			return res.send(404);
+		}
 		var site = sitesData.rows[0].value,
 			results = resultsData.rows,
 			positionsByKeyword = {};
@@ -207,6 +277,70 @@ app.getAuthenticated('/sites/*', function(req, res) {
 	    });
 	}, errorHandler);
 });
+
+// POST /sites/http://www.example.com
+app.postAuthenticated('/sites/*', function(req, res) {
+	var url = req.params[0],
+		id = req.body.id,
+		rev = req.body.rev,
+		site = {type: 'site', url: url, _id: id, _rev: rev};
+
+	if (!authorized(req).to('update', 'site')(site)) {
+		res.writeHead(403, { 'Content-Type': 'text/plain' });
+	    res.end('Not authorized');
+	    return;
+	}
+
+	// TODO Validate unchanged URL (in CouchDB?)
+
+	// TODO Validate keywords, trim
+	site.keywords = req.body.keywords.split(/\s*\r?\n\s*/);
+
+	db.saveDoc(querystring.escape(site._id), site, function(er, ok) {
+		if (er) {
+			return res.send(utils.merge({success: false}, er));
+		}
+		res.send({success: true});
+	});
+});
+
+// GET /users
+app.getAuthenticated('/users', function(req, res) {
+	if (!authorized(req).to('view', 'users')()) {
+		res.writeHead(403, { 'Content-Type': 'text/plain' });
+	    res.end('Not authorized');
+	    return;
+	}
+	Do.parallel(
+		view('app', 'usersByUsername', {})
+	)(function(usersData) {
+		var users = usersData.rows.map(function(entry) { return entry.value; });
+		res.render('users.jade', {
+	        locals: utils.merge(layoutLocals(req), {
+	        	title: 'Users',
+        	    users: users
+    	    })
+	    });
+	}, errorHandler);
+});
+
+// GET /users
+app.getAuthenticated('/info', function(req, res) {
+	if (!authorized(req).to('view', 'info')()) {
+		res.writeHead(403, { 'Content-Type': 'text/plain' });
+	    res.end('Not authorized');
+	    return;
+	}
+	res.render('info.jade', {
+        locals: utils.merge(layoutLocals(req), {
+        	title: 'Info',
+       	    info: {
+       	    	memory: process.memoryUsage()
+       	    }
+   	    })
+    });
+});
+
 
 // Only listen on $ node app.js
 

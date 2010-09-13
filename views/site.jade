@@ -1,20 +1,54 @@
-h1
-  span.bcpart Rankings
-  &nbsp;
+h1.bc
+  span.bcpart
+    a(href='/sites') Sites
   span.bcpart= site.url
-ul.positions
-  - each keyword in site.keywords
-    li
-      .position
+.wrapper
+  ul.positions
+    - each keyword in site.keywords
+      li
+        .position
+          - if (positionsByKeyword[keyword] && positionsByKeyword[keyword][0])
+            span.number= positionsByKeyword[keyword][positionsByKeyword[keyword].length - 1][1]
+          - else
+            span.number ?
+        h2.keyword= keyword
         - if (positionsByKeyword[keyword] && positionsByKeyword[keyword][0])
-          span.number= positionsByKeyword[keyword][positionsByKeyword[keyword].length - 1][1]
-        - else
-          span.number ?
-      h2.keyword= keyword
-      - if (positionsByKeyword[keyword] && positionsByKeyword[keyword][0])
-        .graph('data-keyword'=keyword, style='width:600px;height:100px;')
+          .graph('data-keyword'=keyword, style='width:600px;height:100px;')
 
-
+  - if (authorized.to('update', 'site')(site))
+    #edit-keywords-form(title='Edit keyword')
+      form
+        fieldset
+          input(type='hidden', name='id', value=site._id)
+          input(type='hidden', name='rev', value=site._rev)
+          label(for='keywords')
+            | Keywords (one per line)
+          textarea(name='keywords', class='ui-widget-content ui-corner-all', rows='10')
+            = site.keywords.join('\n')
+    button#edit-keywords Edit keywords
+    :javascript
+      | $("#edit-keywords-form").dialog({
+      |   autoOpen: false,
+      |   height: 400,
+      |   width: 450,
+      |   modal: true,
+      |   buttons: {
+      |     'Update site': function() {
+      |       var that = this;
+      |       $.post('/sites/#{site.url}', $("#edit-keywords-form form").serialize(), function(data) {
+      |         if (data.success) { window.location = '/sites/#{site.url}'; }
+      |         else {
+      |           $('#edit-keywords-form .error-message').remove();
+      |           $('#edit-keywords-form').prepend('<div class="error-message ui-widget"><div class="ui-state-error ui-corner-all">' + data.reason + '</div></div>');
+      |         }
+      |       });
+      |     },
+      |     'Cancel': function() {
+      |       $(this).dialog('close');
+      |     }
+      |   }
+      | });
+      | $('#edit-keywords').button({icons: {primary:'ui-icon-gear'}}).click(function() { $('#edit-keywords-form').dialog('open');	});
 
 :javascript
   | var data = #{JSON.stringify(positionsByKeyword)};

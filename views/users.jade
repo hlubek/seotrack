@@ -1,0 +1,13 @@
+h1.bc
+  span.bcpart= title
+.wrapper
+  ul
+    - each user in users
+      li
+        strong= user.username
+        br
+        | Roles:
+        = user.roles.join(', ')
+        br
+        | Sites:
+        = user.sites.join(', ')

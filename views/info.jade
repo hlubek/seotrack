@@ -1,0 +1,9 @@
+h1.bc
+  span.bcpart Info
+.wrapper
+  h2 Memory
+  table
+    - for (key in info.memory)
+      tr
+        th= key
+        td= info.memory[key]
