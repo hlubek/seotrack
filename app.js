@@ -12,8 +12,8 @@ var express = require('express'),
     seotrack = require('./lib/seotrack'),
     couchdb = require('./lib/node-couchdb/couchdb'),
 	client = couchdb.createClient(5984, 'localhost'),
-	db = client.db('seotrack');
-
+	db = client.db('seotrack'),
+    seotrackService = seotrack.createService(db, {});
 
 /*
 
@@ -76,6 +76,25 @@ CouchDB Design Document:
 }
 
 */
+
+
+// Register daily update:
+
+setInterval(function() {
+	console.log('Updating results');
+	db.view('app', 'sitesByUrl', {}, function(er, result) {
+		var sites = result.rows.map(function(entry) { return entry.value; }),
+			config = {};
+		sites.forEach(function(site) {
+			config[site.url] = site.keywords;
+		});
+		seotrackService.updatePositions(config, function(er, success) {
+			if (er) {
+				throw new Error(JSON.stringify(er));
+			}
+		});
+	});
+}, 24 * 60 * 60 * 1000);
 
 var view = function(design, view, query) {
 	return function(callback, errback) {
