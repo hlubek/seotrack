@@ -19,15 +19,61 @@ var express = require('express'),
 
 CouchDB Design Document:
 
+"validate_doc_update": "function(newDoc, oldDoc, userCtx) {
+	if (newDoc._deleted) return;
+	function require(field, message) {
+    	message = message || \"Document must have a \" + field;
+		if (!newDoc[field]) throw({forbidden : message});
+	};
+
+	function unchanged(field) {
+		if (oldDoc && toJSON(oldDoc[field]) != toJSON(newDoc[field])) {
+			throw({forbidden : \"Field can't be changed: \" + field});
+		}
+	}
+ 
+	var type = (oldDoc || newDoc).type;
+	unchanged('type');
+	if (type == 'site') {
+		require('url');
+		unchanged('url');
+     }
+}",
 "views": {
-       "sitesByUrl": {
-           "map": "function(doc) {\u000a  if (doc.type == 'site') {\u000a    emit(doc.url, doc);\u000a  }\u000a}\u000a"
-       },
-       "results": {
-           "map": "function(doc) {\u000a  if (doc.type == 'result') {\u000a    emit([doc.site, doc.keyword, doc.date.substr(0, 4), doc.date.substr(5, 2), doc.date.substr(8, 2)], doc.position);\u000a  }\u000a}\u000a",
-           "reduce": "function(keys, values, rereduce) {\u000a  if (!rereduce) {\u000a    return [sum(values), values.length];\u000a  } else {\u000a    var s = 0, items = 0;\u000a    values.forEach(function(value) {\u000a      s += value[0];\u000a      items += value[1];\u000a    });\u000a    return [s, items];\u000a  }\u000a}"
-       }
-   }
+	"sitesByUrl": {
+		"map": "function(doc) {
+			if (doc.type == 'site') {
+				emit(doc.url, doc);
+			}
+		}"
+   },
+   "results": {
+	   "map": "function(doc) {
+			if (doc.type == 'result') {
+				emit([doc.site, doc.keyword, doc.date.substr(0, 4), doc.date.substr(5, 2), doc.date.substr(8, 2)], doc.position);
+			}
+		}",
+	   "reduce": "function(keys, values, rereduce) {
+			if (!rereduce) {
+				return [sum(values), values.length];
+			} else {
+				var s = 0, items = 0;
+				values.forEach(function(value) {
+					s += value[0];
+					items += value[1];
+				});
+				return [s, items];
+			}
+		}"
+	},
+	"usersByUsername": {
+		"map": "function(doc) {
+			if (doc.type == \"user\") {
+				emit(doc.username, doc);
+			}
+		}"
+	}
+}
 
 */
 
