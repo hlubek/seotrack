@@ -11,6 +11,8 @@ h1.bc
             span.number= positionsByKeyword[keyword][positionsByKeyword[keyword].length - 1][1]
           - else
             span.number ?
+          .icons
+            a(href="#", data-url=site.url, data-keyword=keyword, class="site-reload ui-icon ui-icon-refresh", title="Update position") Update position
         h2.keyword= keyword
         - if (positionsByKeyword[keyword] && positionsByKeyword[keyword][0])
           .graph('data-keyword'=keyword, style='width:600px;height:100px;')
@@ -62,8 +64,9 @@ h1.bc
   |       yaxis: { minTickSize: 1, tickDecimals: 0, tickFormatter: function(val, axis) { return -val.toFixed(axis.tickDecimals) } },
   |       lines: { show: true },
   |       points: { show: true },
-  |       grid: { borderWidth: 0 }
+  |       grid: { borderWidth: 0, color: '#aaaaaa' }
   |     });
   |     }
   |   }
+  |   $('.site-reload').click(function() { $.post('/sites/#{site.url}/positions', {keyword: $(this).attr('data-keyword')}, function(data) {if (data.success) { window.location = '/sites/#{site.url}'; }}); return false; });
   | });

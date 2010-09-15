@@ -173,6 +173,11 @@ ul.positions .position .number {
 	text-shadow: #777777 1px 1px;
 }
 
+ul.positions .position .icons {
+	width: 100%;
+	padding-left: 10px;
+}
+
 ul.positions .keyword {
 	position: absolute;
 	left: 120px;

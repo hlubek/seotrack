@@ -248,6 +248,12 @@ var authorized = function(req) {
 						(user.details.roles.indexOf('siteadmin') !== -1 &&
 						user.details.sites.indexOf(context.url) !== -1);
 				};
+			} else if (action === 'update' && scope === 'positions') {
+				return function(context) {
+					return user.details.roles.indexOf('admin') !== -1 ||
+						(user.details.roles.indexOf('siteadmin') !== -1 &&
+						user.details.sites.indexOf(context.url) !== -1);
+				};
 			}
 			return function(context) {
 				return false;
@@ -343,6 +349,26 @@ app.getAuthenticated('/sites/*', function(req, res) {
     	    })
 	    });
 	}, errorHandler);
+});
+
+// POST /sites/http://www.networkteam.com/positions
+app.postAuthenticated('/sites/*/positions', function(req, res) {
+	var url = req.params[0],
+		keyword = req.body.keyword,
+		site = {type: 'site', url: url};
+
+	if (!authorized(req).to('update', 'positions')(site)) {
+		res.writeHead(403, { 'Content-Type': 'text/plain' });
+	    res.end('Not authorized');
+	    return;
+	}
+
+	seotrackService.updatePosition(url, keyword, function(er, ok) {
+		if (er) {
+			return res.send({success: false, error: JSON.stringify(er)});
+		}
+		res.send({success: true});
+	});
 });
 
 // POST /sites/http://www.example.com
