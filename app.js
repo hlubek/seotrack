@@ -5,7 +5,7 @@
 
 var express = require('express'),
     connect = require('connect'),
-    auth = require('../connect-auth/lib/auth'),
+    auth = require('./lib/connect-auth/auth'),
     Do = require('./lib/do'),
     utils = require('./lib/utils'),
 	querystring = require('querystring'),
