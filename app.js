@@ -176,7 +176,8 @@ app.getAuthenticated = function(route, callback) {
 				callback(req, res);
 			} else {
 				// FIXME Can it happen?
-				errorHandler('Not authenticated', req, res);
+				// errorHandler('Not authenticated', req, res);
+				res.send('Not authenticated', 500);
 			}
 		});
 	});
@@ -192,7 +193,8 @@ app.postAuthenticated = function(route, callback) {
 				callback(req, res);
 			} else {
 				// FIXME Can it happen?
-				errorHandler('Not authenticated', req, res);
+				// errorHandler('Not authenticated', req, res);
+				res.send('Not authenticated', 500);
 			}
 		});
 	});
